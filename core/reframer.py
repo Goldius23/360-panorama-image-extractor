@@ -337,11 +337,13 @@ class Reframer:
         Returns:
             ReframeResult summarising the operation.
         """
+        logger.info(f"Starting reframe_batch: input={input_dir}, output={output_dir}")
         input_path = Path(input_dir)
         output_path = Path(output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
 
         images = _collect_image_files(input_path)
+        logger.info(f"Found {len(images)} images to process")
 
         if not images:
             return ReframeResult(
@@ -476,10 +478,14 @@ def _process_single_image(
             math and goes straight to cv2.remap.
         timer: Optional substage timer for instrumentation.
     """
+    logger.debug(f"Processing image: {image_path}")
     with timer.time("imread") if timer else contextmanager(lambda: (yield))():
         equirect = cv2.imread(image_path)
     if equirect is None:
+        logger.error(f"Failed to load image: {image_path}")
         return [], f"Failed to load {image_path}"
+    
+    logger.debug(f"Image loaded: {equirect.shape}")
 
     mask: Optional[np.ndarray] = None
     if mask_path:
@@ -522,9 +528,22 @@ def _process_single_image(
         out_path = view_dir / out_name
 
         with timer.time("imwrite_img") if timer else contextmanager(lambda: (yield))():
-            cv2.imwrite(
-                str(out_path), persp, [cv2.IMWRITE_JPEG_QUALITY, config.jpeg_quality]
+            # Use imencode + file write for Windows Unicode path support
+            # cv2.imwrite fails with non-ASCII characters on Windows
+            success, encoded = cv2.imencode(
+                '.jpg', persp, [cv2.IMWRITE_JPEG_QUALITY, config.jpeg_quality]
             )
+            if success:
+                try:
+                    with open(out_path, 'wb') as f:
+                        f.write(encoded.tobytes())
+                except Exception as e:
+                    logger.error(f"Failed to write image {out_path}: {e}")
+                    return [], f"Failed to write image: {out_path} ({e})"
+            else:
+                logger.error(f"Failed to encode image: {out_path}")
+                return [], f"Failed to encode image: {out_path}"
+            logger.debug(f"Successfully wrote: {out_path}")
         output_files.append(f"{view_name}/{out_name}")
 
         # Mask reprojection — same geometry, nearest-neighbor interpolation

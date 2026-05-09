@@ -1,21 +1,33 @@
+# Python
 __pycache__/
-*.pyc
-.venv/
-.pytest_cache/
-.pytest_tmp*/
-settings.json
+*.py[cod]
+*$py.class
+*.so
+*.egg
 *.egg-info/
-masking_setup_debug.txt
-.lichtfeld-source.json
-.tmp-dll/
-tmp/
-COLMAP_RIG_REPORT.md
-CLAUDE.md
-*.code-workspace
-.superpowers/
-.claude/
-dev/
-dev/bp_harness_output/
-docs/*
-tests/
-DIAGNOSTICS.md
+dist/
+build/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test data
+test_data/
+
+# Temporary files
+*.tmp
